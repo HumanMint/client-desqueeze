@@ -45,7 +45,6 @@ function setRatio(value) {
     btn.classList.toggle('active', isOn);
   });
 
-  pulse('.value');
   render();
 }
 
