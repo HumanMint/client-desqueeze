@@ -1,5 +1,6 @@
 const fileInput = document.getElementById('fileInput');
 const chooseBtn = document.getElementById('chooseBtn');
+const welcomeChooseBtn = document.getElementById('welcomeChooseBtn');
 const dropzone = document.getElementById('dropzone');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -9,43 +10,37 @@ const presetButtons = Array.from(document.querySelectorAll('.preset'));
 const downloadBtn = document.getElementById('downloadBtn');
 const formatSelect = document.getElementById('formatSelect');
 const meta = document.getElementById('meta');
-
-let sourceImage = null;
-let currentRatio = Number(ratioRange.value);
+const stage = document.getElementById('stage');
+const controlsPanel = document.getElementById('controlsPanel');
 
 const canAnimate = typeof window.anime !== 'undefined';
 
-function animateIn(target, opts = {}) {
+let sourceImage = null;
+let currentRatio = Number(ratioRange.value);
+let displayRatio = currentRatio;
+let ratioVelocity = 0;
+let ratioRaf = null;
+let controlsRevealed = false;
+
+function animateElement(target, opts = {}) {
   if (!canAnimate) return;
   window.anime.animate(target, {
-    opacity: [0.65, 1],
-    scale: [0.992, 1],
-    duration: 320,
-    ease: 'out(3)',
+    duration: 420,
+    ease: 'out(4)',
     ...opts,
   });
 }
 
-function pulse(target) {
-  if (!canAnimate) return;
-  window.anime.animate(target, {
-    scale: [1, 1.02, 1],
-    duration: 280,
-    ease: 'inOut(3)',
-  });
-}
+function drawAtRatio(ratio) {
+  if (!sourceImage) return;
 
-function setRatio(value) {
-  currentRatio = Number(value);
-  ratioRange.value = currentRatio.toFixed(2);
-  ratioValue.textContent = currentRatio.toFixed(2);
+  const outW = Math.max(1, Math.round(sourceImage.naturalWidth * ratio));
+  const outH = sourceImage.naturalHeight;
 
-  presetButtons.forEach((btn) => {
-    const isOn = Number(btn.dataset.ratio).toFixed(2) === currentRatio.toFixed(2);
-    btn.classList.toggle('active', isOn);
-  });
-
-  render();
+  canvas.width = outW;
+  canvas.height = outH;
+  ctx.clearRect(0, 0, outW, outH);
+  ctx.drawImage(sourceImage, 0, 0, outW, outH);
 }
 
 function updateMeta() {
@@ -54,30 +49,106 @@ function updateMeta() {
     return;
   }
 
-  const outW = Math.round(sourceImage.naturalWidth * currentRatio);
+  const outW = Math.round(sourceImage.naturalWidth * displayRatio);
   const outH = sourceImage.naturalHeight;
   meta.textContent = `Input ${sourceImage.naturalWidth}×${sourceImage.naturalHeight} → Output ${outW}×${outH}`;
   meta.hidden = false;
 }
 
-function render() {
-  if (!sourceImage) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function syncUIRatio() {
+  ratioRange.value = currentRatio.toFixed(2);
+  ratioValue.textContent = displayRatio.toFixed(2);
+
+  presetButtons.forEach((btn) => {
+    const isOn = Number(btn.dataset.ratio).toFixed(2) === currentRatio.toFixed(2);
+    btn.classList.toggle('active', isOn);
+  });
+}
+
+function springRenderToTarget() {
+  if (!sourceImage) return;
+
+  const stiffness = 0.15;
+  const damping = 0.78;
+
+  const tick = () => {
+    const delta = currentRatio - displayRatio;
+    ratioVelocity += delta * stiffness;
+    ratioVelocity *= damping;
+    displayRatio += ratioVelocity;
+
+    if (Math.abs(delta) < 0.0006 && Math.abs(ratioVelocity) < 0.0006) {
+      displayRatio = currentRatio;
+      ratioVelocity = 0;
+      ratioRaf = null;
+      drawAtRatio(displayRatio);
+      syncUIRatio();
+      updateMeta();
+      return;
+    }
+
+    drawAtRatio(displayRatio);
+    syncUIRatio();
     updateMeta();
-    return;
-  }
+    ratioRaf = requestAnimationFrame(tick);
+  };
 
-  const outW = Math.round(sourceImage.naturalWidth * currentRatio);
-  const outH = sourceImage.naturalHeight;
+  if (ratioRaf) cancelAnimationFrame(ratioRaf);
+  ratioRaf = requestAnimationFrame(tick);
+}
 
-  canvas.width = outW;
-  canvas.height = outH;
-  ctx.clearRect(0, 0, outW, outH);
-  ctx.drawImage(sourceImage, 0, 0, outW, outH);
+function setRatio(value) {
+  currentRatio = Number(value);
+  syncUIRatio();
 
-  downloadBtn.disabled = false;
+  if (!sourceImage) return;
+  springRenderToTarget();
+}
+
+function revealControls() {
+  if (controlsRevealed) return;
+  controlsRevealed = true;
+
+  controlsPanel.classList.remove('is-hidden');
+
+  animateElement('.controls', {
+    opacity: [0, 1],
+    translateX: [-10, 0],
+    duration: 500,
+  });
+
+  animateElement('.controls > *', {
+    opacity: [0, 1],
+    translateY: [12, 0],
+    delay: canAnimate && window.anime.stagger ? window.anime.stagger(60) : 0,
+    duration: 420,
+  });
+}
+
+function animateDropIn() {
+  animateElement('.canvas-wrap', {
+    opacity: [0.7, 1],
+    scale: [0.96, 1],
+    duration: 440,
+  });
+
+  animateElement(canvas, {
+    translateY: [-56, 0],
+    rotate: [-3, 0],
+    scale: [0.88, 1.01, 1],
+    duration: 860,
+    ease: 'out(5)',
+  });
+}
+
+function onImageReady() {
+  stage.classList.remove('is-empty');
+  revealControls();
+  displayRatio = currentRatio;
+  drawAtRatio(displayRatio);
   updateMeta();
-  animateIn('.canvas-wrap', { duration: 360 });
+  downloadBtn.disabled = false;
+  animateDropIn();
 }
 
 function loadFile(file) {
@@ -86,24 +157,25 @@ function loadFile(file) {
   const img = new Image();
   img.onload = () => {
     sourceImage = img;
-    render();
-    animateIn('.dropzone', { opacity: [1, 0.92, 1], duration: 420 });
+    onImageReady();
   };
   img.src = URL.createObjectURL(file);
 }
 
-chooseBtn.addEventListener('click', () => fileInput.click());
+function openPicker() {
+  fileInput.click();
+}
 
-fileInput.addEventListener('change', (e) => {
-  loadFile(e.target.files[0]);
-});
+chooseBtn.addEventListener('click', openPicker);
+welcomeChooseBtn.addEventListener('click', openPicker);
 
+fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
 ratioRange.addEventListener('input', (e) => setRatio(e.target.value));
 
 presetButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
     setRatio(btn.dataset.ratio);
-    pulse(btn);
+    animateElement(btn, { scale: [1, 1.04, 1], duration: 260, ease: 'inOut(3)' });
   });
 });
 
@@ -116,7 +188,8 @@ downloadBtn.addEventListener('click', () => {
   a.href = canvas.toDataURL(mime, 0.95);
   a.download = `desqueezed-${currentRatio.toFixed(2)}x.${ext}`;
   a.click();
-  pulse(downloadBtn);
+
+  animateElement(downloadBtn, { scale: [1, 1.03, 1], duration: 240, ease: 'inOut(3)' });
 });
 
 ['dragenter', 'dragover'].forEach((eventName) => {
@@ -133,20 +206,15 @@ downloadBtn.addEventListener('click', () => {
   });
 });
 
-dropzone.addEventListener('drop', (e) => {
-  const file = e.dataTransfer.files[0];
-  loadFile(file);
-});
-
-dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('drop', (e) => loadFile(e.dataTransfer.files[0]));
+dropzone.addEventListener('click', openPicker);
 dropzone.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    fileInput.click();
+    openPicker();
   }
 });
 
-animateIn('.topbar', { delay: 40 });
-animateIn('.controls', { delay: 80 });
-animateIn('.stage', { delay: 120 });
-setRatio(currentRatio);
+animateElement('.topbar', { opacity: [0, 1], translateY: [-8, 0], duration: 420 });
+animateElement('.dropzone', { opacity: [0, 1], scale: [0.98, 1], delay: 80, duration: 500 });
+syncUIRatio();

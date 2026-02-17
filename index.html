@@ -17,10 +17,10 @@
       </header>
 
       <section class="layout">
-        <aside class="panel controls" aria-label="Controls">
+        <aside class="panel controls is-hidden" aria-label="Controls" id="controlsPanel">
           <input id="fileInput" type="file" accept="image/*" />
 
-          <button class="btn primary" id="chooseBtn">Choose image</button>
+          <button class="btn" id="chooseBtn">Choose another image</button>
 
           <div class="control-block">
             <div class="label-row">
@@ -45,13 +45,17 @@
             </select>
           </div>
 
-          <button id="downloadBtn" class="btn" disabled>Download</button>
+          <button id="downloadBtn" class="btn primary" disabled>Download</button>
         </aside>
 
-        <section class="panel stage" aria-label="Preview">
+        <section class="panel stage is-empty" aria-label="Preview" id="stage">
           <div id="dropzone" class="dropzone" tabindex="0">
-            <p><strong>Drop image here</strong> or click “Choose image”</p>
-            <p class="muted">Everything stays local in your browser.</p>
+            <div id="welcome" class="welcome">
+              <p class="welcome-title">Drop an anamorphic image</p>
+              <p class="muted">or pick one from your device</p>
+              <button class="btn primary" id="welcomeChooseBtn">Choose image</button>
+            </div>
+            <p class="muted drop-hint">Everything stays local in your browser.</p>
           </div>
 
           <div class="meta" id="meta" hidden></div>
