@@ -1,4 +1,5 @@
 const fileInput = document.getElementById('fileInput');
+const chooseBtn = document.getElementById('chooseBtn');
 const dropzone = document.getElementById('dropzone');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -12,16 +13,39 @@ const meta = document.getElementById('meta');
 let sourceImage = null;
 let currentRatio = Number(ratioRange.value);
 
+const canAnimate = typeof window.anime !== 'undefined';
+
+function animateIn(target, opts = {}) {
+  if (!canAnimate) return;
+  window.anime.animate(target, {
+    opacity: [0.65, 1],
+    scale: [0.992, 1],
+    duration: 320,
+    ease: 'out(3)',
+    ...opts,
+  });
+}
+
+function pulse(target) {
+  if (!canAnimate) return;
+  window.anime.animate(target, {
+    scale: [1, 1.02, 1],
+    duration: 280,
+    ease: 'inOut(3)',
+  });
+}
+
 function setRatio(value) {
   currentRatio = Number(value);
   ratioRange.value = currentRatio.toFixed(2);
   ratioValue.textContent = currentRatio.toFixed(2);
 
   presetButtons.forEach((btn) => {
-    const on = Number(btn.dataset.ratio).toFixed(2) === currentRatio.toFixed(2);
-    btn.classList.toggle('active', on);
+    const isOn = Number(btn.dataset.ratio).toFixed(2) === currentRatio.toFixed(2);
+    btn.classList.toggle('active', isOn);
   });
 
+  pulse('.value');
   render();
 }
 
@@ -33,7 +57,7 @@ function updateMeta() {
 
   const outW = Math.round(sourceImage.naturalWidth * currentRatio);
   const outH = sourceImage.naturalHeight;
-  meta.textContent = `Input: ${sourceImage.naturalWidth}×${sourceImage.naturalHeight} → Output: ${outW}×${outH}`;
+  meta.textContent = `Input ${sourceImage.naturalWidth}×${sourceImage.naturalHeight} → Output ${outW}×${outH}`;
   meta.hidden = false;
 }
 
@@ -54,6 +78,7 @@ function render() {
 
   downloadBtn.disabled = false;
   updateMeta();
+  animateIn('.canvas-wrap', { duration: 360 });
 }
 
 function loadFile(file) {
@@ -63,20 +88,24 @@ function loadFile(file) {
   img.onload = () => {
     sourceImage = img;
     render();
+    animateIn('.dropzone', { opacity: [1, 0.92, 1], duration: 420 });
   };
   img.src = URL.createObjectURL(file);
 }
+
+chooseBtn.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', (e) => {
   loadFile(e.target.files[0]);
 });
 
-ratioRange.addEventListener('input', (e) => {
-  setRatio(e.target.value);
-});
+ratioRange.addEventListener('input', (e) => setRatio(e.target.value));
 
 presetButtons.forEach((btn) => {
-  btn.addEventListener('click', () => setRatio(btn.dataset.ratio));
+  btn.addEventListener('click', () => {
+    setRatio(btn.dataset.ratio);
+    pulse(btn);
+  });
 });
 
 downloadBtn.addEventListener('click', () => {
@@ -88,6 +117,7 @@ downloadBtn.addEventListener('click', () => {
   a.href = canvas.toDataURL(mime, 0.95);
   a.download = `desqueezed-${currentRatio.toFixed(2)}x.${ext}`;
   a.click();
+  pulse(downloadBtn);
 });
 
 ['dragenter', 'dragover'].forEach((eventName) => {
@@ -117,4 +147,7 @@ dropzone.addEventListener('keydown', (e) => {
   }
 });
 
+animateIn('.topbar', { delay: 40 });
+animateIn('.controls', { delay: 80 });
+animateIn('.stage', { delay: 120 });
 setRatio(currentRatio);
