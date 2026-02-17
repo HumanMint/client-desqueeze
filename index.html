@@ -36,6 +36,26 @@
             <input id="ratioRange" type="range" min="1.00" max="3.00" step="0.01" value="2.00" />
           </div>
 
+          <div class="control-block motion-block">
+            <div class="label-row">
+              <span class="label">Motion</span>
+              <span class="value"><span id="motionPresetValue">Medium</span></span>
+            </div>
+            <div class="presets" role="radiogroup" aria-label="Motion preset">
+              <button class="motion-preset" data-motion="subtle">Subtle</button>
+              <button class="motion-preset active" data-motion="medium">Medium</button>
+              <button class="motion-preset" data-motion="expressive">Expressive</button>
+            </div>
+            <div class="mini-control">
+              <label class="label" for="stiffnessRange">Spring stiffness</label>
+              <input id="stiffnessRange" type="range" min="0.06" max="0.30" step="0.01" value="0.15" />
+            </div>
+            <div class="mini-control">
+              <label class="label" for="dampingRange">Spring damping</label>
+              <input id="dampingRange" type="range" min="0.60" max="0.92" step="0.01" value="0.78" />
+            </div>
+          </div>
+
           <div class="control-block inline">
             <label class="label" for="formatSelect">Export</label>
             <select id="formatSelect" class="select">
