@@ -94,7 +94,6 @@ body {
 
 .btn,
 .preset,
-.motion-preset,
 .select {
   appearance: none;
   border: 1px solid var(--line);
@@ -108,14 +107,12 @@ body {
 }
 
 .btn,
-.preset,
-.motion-preset {
+.preset {
   cursor: pointer;
 }
 
 .btn:hover,
 .preset:hover,
-.motion-preset:hover,
 .select:hover {
   border-color: #bfbfb8;
 }
@@ -172,20 +169,10 @@ body {
   gap: 8px;
 }
 
-.motion-block .presets {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.preset.active,
-.motion-preset.active {
+.preset.active {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
-}
-
-.mini-control {
-  display: grid;
-  gap: 6px;
 }
 
 input[type="range"] {

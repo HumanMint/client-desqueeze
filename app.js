@@ -7,10 +7,6 @@ const ctx = canvas.getContext('2d');
 const ratioRange = document.getElementById('ratioRange');
 const ratioValue = document.getElementById('ratioValue');
 const presetButtons = Array.from(document.querySelectorAll('.preset'));
-const motionPresetButtons = Array.from(document.querySelectorAll('.motion-preset'));
-const motionPresetValue = document.getElementById('motionPresetValue');
-const stiffnessRange = document.getElementById('stiffnessRange');
-const dampingRange = document.getElementById('dampingRange');
 const downloadBtn = document.getElementById('downloadBtn');
 const formatSelect = document.getElementById('formatSelect');
 const meta = document.getElementById('meta');
@@ -26,15 +22,11 @@ let ratioVelocity = 0;
 let ratioRaf = null;
 let controlsRevealed = false;
 
-const MOTION_PRESETS = {
-  subtle: { label: 'Subtle', stiffness: 0.1, damping: 0.86, dropY: -28, rotate: -1.2, duration: 650 },
-  medium: { label: 'Medium', stiffness: 0.15, damping: 0.78, dropY: -52, rotate: -3, duration: 860 },
-  expressive: { label: 'Expressive', stiffness: 0.22, damping: 0.7, dropY: -78, rotate: -5, duration: 1060 },
-};
-
-let motionMode = 'medium';
-let springStiffness = MOTION_PRESETS[motionMode].stiffness;
-let springDamping = MOTION_PRESETS[motionMode].damping;
+const SPRING_STIFFNESS = 0.1;
+const SPRING_DAMPING = 0.86;
+const DROP_Y = -28;
+const DROP_ROTATE = -1.2;
+const DROP_DURATION = 650;
 
 function animateElement(target, opts = {}) {
   if (!canAnimate) return;
@@ -79,33 +71,13 @@ function syncUIRatio() {
   });
 }
 
-function syncMotionUI() {
-  const preset = MOTION_PRESETS[motionMode];
-  motionPresetValue.textContent = preset.label;
-
-  motionPresetButtons.forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.motion === motionMode);
-  });
-
-  stiffnessRange.value = String(springStiffness);
-  dampingRange.value = String(springDamping);
-}
-
-function setMotionMode(mode) {
-  if (!MOTION_PRESETS[mode]) return;
-  motionMode = mode;
-  springStiffness = MOTION_PRESETS[mode].stiffness;
-  springDamping = MOTION_PRESETS[mode].damping;
-  syncMotionUI();
-}
-
 function springRenderToTarget() {
   if (!sourceImage) return;
 
   const tick = () => {
     const delta = currentRatio - displayRatio;
-    ratioVelocity += delta * springStiffness;
-    ratioVelocity *= springDamping;
+    ratioVelocity += delta * SPRING_STIFFNESS;
+    ratioVelocity *= SPRING_DAMPING;
     displayRatio += ratioVelocity;
 
     if (Math.abs(delta) < 0.0006 && Math.abs(ratioVelocity) < 0.0006) {
@@ -157,19 +129,17 @@ function revealControls() {
 }
 
 function animateDropIn() {
-  const preset = MOTION_PRESETS[motionMode];
-
   animateElement('.canvas-wrap', {
     opacity: [0.7, 1],
     scale: [0.96, 1],
-    duration: Math.round(preset.duration * 0.55),
+    duration: Math.round(DROP_DURATION * 0.55),
   });
 
   animateElement(canvas, {
-    translateY: [preset.dropY, 0],
-    rotate: [preset.rotate, 0],
-    scale: [0.88, 1.01, 1],
-    duration: preset.duration,
+    translateY: [DROP_Y, 0],
+    rotate: [DROP_ROTATE, 0],
+    scale: [0.92, 1.01, 1],
+    duration: DROP_DURATION,
     ease: 'out(5)',
   });
 }
@@ -212,25 +182,6 @@ presetButtons.forEach((btn) => {
   });
 });
 
-motionPresetButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    setMotionMode(btn.dataset.motion);
-    animateElement(btn, { scale: [1, 1.04, 1], duration: 260, ease: 'inOut(3)' });
-  });
-});
-
-stiffnessRange.addEventListener('input', (e) => {
-  springStiffness = Number(e.target.value);
-  motionPresetValue.textContent = 'Custom';
-  motionPresetButtons.forEach((btn) => btn.classList.remove('active'));
-});
-
-dampingRange.addEventListener('input', (e) => {
-  springDamping = Number(e.target.value);
-  motionPresetValue.textContent = 'Custom';
-  motionPresetButtons.forEach((btn) => btn.classList.remove('active'));
-});
-
 downloadBtn.addEventListener('click', () => {
   if (!sourceImage) return;
 
@@ -270,4 +221,3 @@ dropzone.addEventListener('keydown', (e) => {
 animateElement('.topbar', { opacity: [0, 1], translateY: [-8, 0], duration: 420 });
 animateElement('.dropzone', { opacity: [0, 1], scale: [0.98, 1], delay: 80, duration: 500 });
 syncUIRatio();
-syncMotionUI();
